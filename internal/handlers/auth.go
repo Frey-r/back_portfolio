@@ -3,7 +3,9 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+
 	"net/url"
 
 
@@ -26,18 +28,27 @@ func NewAuthHandler(cfg *config.Config, authSvc *services.AuthService) *AuthHand
 
 // HandleLinkedInLogin redirects to LinkedIn Auth page
 func (h *AuthHandler) HandleLinkedInLogin(w http.ResponseWriter, r *http.Request) {
-	scope := "openid profile w_member_social r_member_social" // Adjusted for common needs
+	scope := "openid profile email"
 	
+	clientID := h.cfg.LinkedInClientID
+	if clientID == "" {
+		log.Println("WARNING: LinkedIn Client ID is empty in configuration")
+	}
+
 	params := url.Values{}
 	params.Add("response_type", "code")
-	params.Add("client_id", h.cfg.LinkedInClientID)
+	params.Add("client_id", clientID)
 	params.Add("redirect_uri", h.cfg.LinkedInRedirectURI)
-	params.Add("state", "random_state_string_for_security") // In production, generate and verify state
+	params.Add("state", "random_state_string_for_security")
 	params.Add("scope", scope)
 
 	authURL := "https://www.linkedin.com/oauth/v2/authorization?" + params.Encode()
+	
+	log.Printf("Redirecting to LinkedIn Auth: %s\n", authURL)
+	
 	http.Redirect(w, r, authURL, http.StatusTemporaryRedirect)
 }
+
 
 // HandleLinkedInCallback handles the redirect from LinkedIn
 func (h *AuthHandler) HandleLinkedInCallback(w http.ResponseWriter, r *http.Request) {
