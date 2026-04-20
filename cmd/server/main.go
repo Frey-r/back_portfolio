@@ -66,8 +66,9 @@ func main() {
 
 	// 8. Server Configuration
 	server := &http.Server{
-		Addr:         ":" + cfg.Port,
+		Addr:         cfg.Port,
 		Handler:      handler,
+
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,

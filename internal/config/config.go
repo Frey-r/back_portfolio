@@ -33,9 +33,10 @@ func Load() *Config {
 		Port:                 getEnv("PORT", "8080"),
 		AllowedOrigins:       strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:4321"), ","),
 		SQLitePath:           getEnv("SQLITE_PATH", "./data/portfolio.db"),
-		LinkedInClientID:     getEnv("LINKEDIN_CLIENT_ID", ""),
+		LinkedInClientID:     getEnv("LINKEDIN_CLIENT_ID", getEnv("LINKEDIN_ACCESS_ID", "")),
 		LinkedInClientSecret: getEnv("LINKEDIN_CLIENT_SECRET", ""),
-		LinkedInRedirectURI:  getEnv("LINKEDIN_REDIRECT_URI", "http://localhost:8080/api/auth/linkedin/callback"),
+		LinkedInRedirectURI:  getEnv("LINKEDIN_REDIRECT_URI", "http://localhost/api/auth/linkedin/callback"),
+
 		LinkedInAccessToken:  getEnv("LINKEDIN_ACCESS_TOKEN", ""),
 		ContactNotificationEmail: getEnv("CONTACT_NOTIFICATION_EMAIL", "hello@eduardobachmann.dev"),
 		RateLimitContact:     getEnvAsInt("RATE_LIMIT_CONTACT", 10),
