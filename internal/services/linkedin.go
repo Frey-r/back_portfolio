@@ -155,10 +155,10 @@ func (s *LinkedInService) setFallbackData() {
 
 	s.cache = &models.LinkedInPost{
 		ID:       "fallback",
-		Text:     "La arquitectura de las aplicaciones web modernas requiere un balance entre rendimiento bruto y una estructura de código mantenible. Migrar a Golang para microservicios ha reducido nuestra latencia p99 en un 60% sin sacrificar el tiempo de desarrollo. #Arquitectura #Golang #Microservicios",
-		URL:      "https://linkedin.com/in/eduardobachmann",
-		Likes:    1240,
-		Comments: 84,
-		Date:     "1 Sem",
+		Text:     `🏠 ¡Hola red! Les comparto un proyecto personal que desarrollé recientemente. 🔍 Con mi contrato de arriendo próximo a finalizar, decidí automatizar la búsqueda de mi próximo hogar utilizando tecnología. 💻 Desarrollé un bot en Python que: Hace web scraping, almacena en SQLite, y monitorea cambios automáticamente cada mañana.`,
+		URL:      "https://www.linkedin.com/feed/update/urn:li:activity:7298894772088303616/",
+		Likes:    148,
+		Comments: 14,
+		Date:     "Reciente",
 	}
 }
