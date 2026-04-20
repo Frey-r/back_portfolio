@@ -13,8 +13,8 @@ type DB struct {
 	sqlDB *sql.DB
 }
 
-// InitDB initializes the SQLite connection and runs necessary migrations.
-func InitDB(dsn string) (*DB, error) {
+// New initializes the SQLite connection and runs necessary migrations.
+func New(dsn string) (*DB, error) {
 	// Enable WAL (Write-Ahead Logging) and foreign keys for better performance and safety.
 	connectionString := fmt.Sprintf("file:%s?cache=shared&mode=rwc&_journal_mode=WAL&_fk=1", dsn)
 	
@@ -46,6 +46,14 @@ func InitDB(dsn string) (*DB, error) {
 func (db *DB) Close() error {
 	if db.sqlDB != nil {
 		return db.sqlDB.Close()
+	}
+	return nil
+}
+
+// Ping verifies the database connection.
+func (db *DB) Ping() error {
+	if db.sqlDB != nil {
+		return db.sqlDB.Ping()
 	}
 	return nil
 }

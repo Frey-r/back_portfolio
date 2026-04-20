@@ -19,89 +19,81 @@ import (
 func main() {
 	// 1. Load Configuration
 	cfg := config.Load()
-	log.Printf("Starting Portfolio Backend on port %s", cfg.Port)
-
-	// Ensure data directory exists
-	if err := os.MkdirAll("./data", 0755); err != nil {
-		log.Fatalf("Failed to create data directory: %v", err)
-	}
 
 	// 2. Initialize Database
-	db, err := database.InitDB(cfg.SQLitePath)
+	db, err := database.New(cfg.SQLitePath)
 	if err != nil {
-		log.Fatalf("Database initialization failed: %v", err)
+		log.Fatalf("Critical error: Could not initialize database: %v", err)
 	}
 	defer db.Close()
 	log.Println("Database initialized successfully")
 
-	// 3. Initialize Services
+	// Initialize Services
 	contactSvc := services.NewContactService(db)
-	linkedinSvc := services.NewLinkedInService(cfg.LinkedInAccessToken)
+	authSvc := services.NewAuthService(db)
+	linkedinSvc := services.NewLinkedInService(cfg, authSvc)
 
-	// 4. Initialize Handlers
+	// Initialize Handlers
+	healthHandler := handlers.NewHealthHandler(db)
+	statusHandler := handlers.NewStatusHandler()
 	contactHandler := handlers.NewContactHandler(contactSvc)
 	linkedinHandler := handlers.NewLinkedInHandler(linkedinSvc)
+	authHandler := handlers.NewAuthHandler(cfg, authSvc)
 
-	// 5. Initialize Rate Limiter
-	rateLimiter := middleware.NewRateLimiter(cfg.RateLimitContact, cfg.RateLimitContact) // burst = limit
-	
-	// 6. Setup Router
-	// Using Go 1.22+ enhanced ServeMux
+	// Initialize Rate Limiter
+	contactRateLimiter := middleware.NewRateLimiter(cfg.RateLimitContact, cfg.RateLimitContact)
+
+	// --- Routes ---
 	mux := http.NewServeMux()
 
-	// Public Routes
-	mux.HandleFunc("GET /api/health", handlers.HandleHealth)
-	mux.HandleFunc("GET /api/status", handlers.HandleStatus)
+	// Health & Status
+	mux.HandleFunc("GET /api/health", healthHandler.HandleHealth)
+	mux.HandleFunc("GET /api/status", statusHandler.HandleStatus)
+
+	// LinkedIn
 	mux.HandleFunc("GET /api/linkedin/top-post", linkedinHandler.HandleTopPost)
 
-	// Rate Limited Routes
-	mux.HandleFunc("POST /api/contact", rateLimiter.Limit(contactHandler.HandleSubmit))
+	// Auth (LinkedIn OAuth 2.0)
+	mux.HandleFunc("GET /api/auth/linkedin/login", authHandler.HandleLinkedInLogin)
+	mux.HandleFunc("GET /api/auth/linkedin/callback", authHandler.HandleLinkedInCallback)
+
+	// Contact Form (Rate Limited)
+	mux.HandleFunc("POST /api/contact", contactRateLimiter.Limit(contactHandler.HandleSubmit))
 
 	// 7. Apply Global Middleware
 	handler := middleware.CORS(cfg.AllowedOrigins)(mux)
-	handler = middleware.Logger(handler) // Logger runs first (wraps CORS)
+	handler = middleware.Logger(handler)
 
-	// 8. Server Setup with Graceful Shutdown
-	srv := &http.Server{
-		Addr:         cfg.Port,
+	// 8. Server Configuration
+	server := &http.Server{
+		Addr:         ":" + cfg.Port,
 		Handler:      handler,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  120 * time.Second,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
-	// Channel to listen for errors coming from the listener
-	serverErrors := make(chan error, 1)
+	// 9. Graceful Shutdown Setup
+	done := make(chan os.Signal, 1)
+	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
 
-	// Start server
 	go func() {
-		log.Printf("Server listening on %s", srv.Addr)
-		serverErrors <- srv.ListenAndServe()
+		log.Printf("Starting Portfolio Backend on port :%s", cfg.Port)
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server failed: %v", err)
+		}
 	}()
 
-	// Channel to listen for an interrupt or terminate signal from the OS
-	osSignals := make(chan os.Signal, 1)
-	signal.Notify(osSignals, os.Interrupt, syscall.SIGTERM)
+	// Wait for termination signal
+	<-done
+	log.Println("Gracefully shutting down...")
 
-	// Block until a signal is received
-	select {
-	case err := <-serverErrors:
-		log.Fatalf("Error starting server: %v", err)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
-	case sig := <-osSignals:
-		log.Printf("Received signal: %v. Starting graceful shutdown...", sig)
-
-		// Create a deadline to wait for
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
-		if err := srv.Shutdown(ctx); err != nil {
-			log.Printf("Graceful shutdown did not complete in time: %v", err)
-			if err := srv.Close(); err != nil {
-				log.Fatalf("Could not stop server gracefully: %v", err)
-			}
-		}
+	if err := server.Shutdown(ctx); err != nil {
+		log.Fatalf("Server forced to shutdown: %v", err)
 	}
 
-	log.Println("Server stopped")
+	log.Println("Server exited properly")
 }

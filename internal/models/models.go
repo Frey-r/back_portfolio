@@ -31,6 +31,7 @@ type ContactRecord struct {
 
 // LinkedInPost encapsulates the details of a LinkedIn post retrieved for the portfolio.
 type LinkedInPost struct {
+	ID       string `json:"id"`
 	Text     string `json:"text"`
 	URL      string `json:"url"`
 	Likes    int    `json:"likes"`
@@ -38,9 +39,33 @@ type LinkedInPost struct {
 	Date     string `json:"date"`
 }
 
+// TokenResponse represents the LinkedIn OAuth token response.
+type TokenResponse struct {
+	AccessToken  string `json:"access_token"`
+	ExpiresIn    int    `json:"expires_in"`
+	RefreshToken string `json:"refresh_token,omitempty"`
+}
+
+// LinkedInUser represents the simplified LinkedIn user info from /v2/userinfo
+type LinkedInUser struct {
+	Sub string `json:"sub"` // This is the user URN
+	Name string `json:"name"`
+}
+
+// AuthToken persisted in DB
+type AuthToken struct {
+	Provider     string
+	AccessToken  string
+	RefreshToken string
+	UserURN      string
+	ExpiresAt    time.Time
+}
+
 // StatusInfo models the current availability status of the professional.
+
 type StatusInfo struct {
 	Available   bool   `json:"available"`
 	Message     string `json:"message"`
-	AcceptingBy string `json:"accepting_by"`
+	LastUpdated string `json:"last_updated"`
 }
+

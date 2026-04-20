@@ -13,6 +13,9 @@ type Config struct {
 	Port                     string
 	AllowedOrigins           []string
 	SQLitePath               string
+	LinkedInClientID         string
+	LinkedInClientSecret     string
+	LinkedInRedirectURI      string
 	LinkedInAccessToken      string
 	ContactNotificationEmail string
 	RateLimitContact         int
@@ -27,14 +30,18 @@ func Load() *Config {
 	}
 
 	cfg := &Config{
-		Port:                     getEnv("PORT", "8080"),
-		AllowedOrigins:           strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:4321"), ","),
-		SQLitePath:               getEnv("SQLITE_PATH", "./data/portfolio.db"),
-		LinkedInAccessToken:      getEnv("LINKEDIN_ACCESS_TOKEN", ""),
+		Port:                 getEnv("PORT", "8080"),
+		AllowedOrigins:       strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:4321"), ","),
+		SQLitePath:           getEnv("SQLITE_PATH", "./data/portfolio.db"),
+		LinkedInClientID:     getEnv("LINKEDIN_CLIENT_ID", ""),
+		LinkedInClientSecret: getEnv("LINKEDIN_CLIENT_SECRET", ""),
+		LinkedInRedirectURI:  getEnv("LINKEDIN_REDIRECT_URI", "http://localhost:8080/api/auth/linkedin/callback"),
+		LinkedInAccessToken:  getEnv("LINKEDIN_ACCESS_TOKEN", ""),
 		ContactNotificationEmail: getEnv("CONTACT_NOTIFICATION_EMAIL", "hello@eduardobachmann.dev"),
-		RateLimitContact:         getEnvAsInt("RATE_LIMIT_CONTACT", 10),
-		RateLimitGeneral:         getEnvAsInt("RATE_LIMIT_GENERAL", 60),
+		RateLimitContact:     getEnvAsInt("RATE_LIMIT_CONTACT", 10),
+		RateLimitGeneral:     getEnvAsInt("RATE_LIMIT_GENERAL", 60),
 	}
+
 
 	// Ensure port has a leading colon if not provided
 	if !strings.HasPrefix(cfg.Port, ":") {
