@@ -31,6 +31,6 @@ COPY --from=builder /app/.env.example /app/.env
 # Create data directory for SQLite
 RUN mkdir -p /app/data
 
-EXPOSE 8080
+EXPOSE 8082
 
 CMD ["/app/server"]

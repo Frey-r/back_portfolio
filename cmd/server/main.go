@@ -49,21 +49,21 @@ func main() {
 	mux := http.NewServeMux()
 
 	// Health & Status
-	mux.HandleFunc("GET /api/health", healthHandler.HandleHealth)
-	mux.HandleFunc("GET /api/status", statusHandler.HandleStatus)
+	mux.HandleFunc("GET /health", healthHandler.HandleHealth)
+	mux.HandleFunc("GET /status", statusHandler.HandleStatus)
 
 	// LinkedIn
-	mux.HandleFunc("GET /api/linkedin/top-post", linkedinHandler.HandleTopPost)
+	mux.HandleFunc("GET /linkedin/top-post", linkedinHandler.HandleTopPost)
 
 	// Auth (LinkedIn OAuth 2.0)
-	mux.HandleFunc("GET /api/auth/linkedin/login", authHandler.HandleLinkedInLogin)
-	mux.HandleFunc("GET /api/auth/linkedin/callback", authHandler.HandleLinkedInCallback)
+	mux.HandleFunc("GET /auth/linkedin/login", authHandler.HandleLinkedInLogin)
+	mux.HandleFunc("GET /auth/linkedin/callback", authHandler.HandleLinkedInCallback)
 
 	// GitHub (Rate Limited)
-	mux.HandleFunc("GET /api/github/last-push", contactRateLimiter.Limit(githubHandler.HandleLastPush))
+	mux.HandleFunc("GET /github/last-push", contactRateLimiter.Limit(githubHandler.HandleLastPush))
 
 	// Contact Form (Rate Limited)
-	mux.HandleFunc("POST /api/contact", contactRateLimiter.Limit(contactHandler.HandleSubmit))
+	mux.HandleFunc("POST /contact", contactRateLimiter.Limit(contactHandler.HandleSubmit))
 
 	// 7. Apply Global Middleware
 	handler := middleware.CORS(cfg.AllowedOrigins)(mux)

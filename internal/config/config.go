@@ -32,12 +32,12 @@ func Load() *Config {
 	}
 
 	cfg := &Config{
-		Port:                 getEnv("PORT", "8080"),
+		Port:                 getEnv("PORT", "8082"),
 		AllowedOrigins:       strings.Split(getEnv("ALLOWED_ORIGINS", "http://localhost:4321"), ","),
 		SQLitePath:           getEnv("SQLITE_PATH", "./data/portfolio.db"),
 		LinkedInClientID:     getEnv("LINKEDIN_CLIENT_ID", getEnv("LINKEDIN_ACCESS_ID", "")),
 		LinkedInClientSecret: getEnv("LINKEDIN_CLIENT_SECRET", ""),
-		LinkedInRedirectURI:  getEnv("LINKEDIN_REDIRECT_URI", "http://localhost/api/auth/linkedin/callback"),
+		LinkedInRedirectURI:  getEnv("LINKEDIN_REDIRECT_URI", "http://ebachmann.dev/api-portfolio/auth/linkedin/callback"),
 
 		LinkedInAccessToken:      getEnv("LINKEDIN_ACCESS_TOKEN", ""),
 		ContactNotificationEmail: getEnv("CONTACT_NOTIFICATION_EMAIL", "hello@eduardobachmann.dev"),
