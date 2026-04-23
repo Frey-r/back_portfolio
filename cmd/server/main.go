@@ -32,6 +32,7 @@ func main() {
 	contactSvc := services.NewContactService(db)
 	authSvc := services.NewAuthService(db)
 	linkedinSvc := services.NewLinkedInService(cfg, authSvc)
+	githubSvc := services.NewGitHubService(cfg.GitHubPAT)
 
 	// Initialize Handlers
 	healthHandler := handlers.NewHealthHandler(db)
@@ -39,6 +40,7 @@ func main() {
 	contactHandler := handlers.NewContactHandler(contactSvc)
 	linkedinHandler := handlers.NewLinkedInHandler(linkedinSvc)
 	authHandler := handlers.NewAuthHandler(cfg, authSvc)
+	githubHandler := handlers.NewGitHubHandler(githubSvc)
 
 	// Initialize Rate Limiter
 	contactRateLimiter := middleware.NewRateLimiter(cfg.RateLimitContact, cfg.RateLimitContact)
@@ -57,6 +59,9 @@ func main() {
 	mux.HandleFunc("GET /api/auth/linkedin/login", authHandler.HandleLinkedInLogin)
 	mux.HandleFunc("GET /api/auth/linkedin/callback", authHandler.HandleLinkedInCallback)
 
+	// GitHub (Rate Limited)
+	mux.HandleFunc("GET /api/github/last-push", contactRateLimiter.Limit(githubHandler.HandleLastPush))
+
 	// Contact Form (Rate Limited)
 	mux.HandleFunc("POST /api/contact", contactRateLimiter.Limit(contactHandler.HandleSubmit))
 
@@ -66,8 +71,8 @@ func main() {
 
 	// 8. Server Configuration
 	server := &http.Server{
-		Addr:         cfg.Port,
-		Handler:      handler,
+		Addr:    cfg.Port,
+		Handler: handler,
 
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
