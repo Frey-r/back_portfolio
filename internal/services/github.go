@@ -103,7 +103,17 @@ func (s *GitHubService) GetLastPush() (*LastPushResponse, error) {
 		s.login = login
 	}
 
-	// Get authenticated user's events (all repos)
+	// Try 1: Get authenticated user's public events
+	result, err := s.getLastPushFromEvents()
+	if err == nil && result != nil {
+		return result, nil
+	}
+
+	// Try 2: Fallback to repos API (includes private repos)
+	return s.getLastPushFromRepos()
+}
+
+func (s *GitHubService) getLastPushFromEvents() (*LastPushResponse, error) {
 	url := fmt.Sprintf("https://api.github.com/users/%s/events/public", s.login)
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -117,17 +127,17 @@ func (s *GitHubService) GetLastPush() (*LastPushResponse, error) {
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("github API request failed: %w", err)
+		return nil, fmt.Errorf("github events API request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("github API returned status %d", resp.StatusCode)
+		return nil, fmt.Errorf("github events API returned status %d", resp.StatusCode)
 	}
 
 	var events []PushEvent
 	if err := json.NewDecoder(resp.Body).Decode(&events); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+		return nil, fmt.Errorf("failed to decode events response: %w", err)
 	}
 
 	// Find the most recent push event from any repo
@@ -147,5 +157,56 @@ func (s *GitHubService) GetLastPush() (*LastPushResponse, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("no push events found")
+	return nil, nil
+}
+
+// GitHubRepo represents a repository from the GitHub API
+type GitHubRepo struct {
+	FullName  string    `json:"full_name"`
+	PushedAt  time.Time `json:"pushed_at"`
+	Private   bool      `json:"private"`
+	DefaultBranch string `json:"default_branch"`
+}
+
+func (s *GitHubService) getLastPushFromRepos() (*LastPushResponse, error) {
+	// Get user's repos sorted by most recently pushed
+	url := "https://api.github.com/user/repos?sort=pushed&direction=desc&per_page=1"
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+s.pat)
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set("User-Agent", "Portfolio-Backend")
+
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("github repos API request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("github repos API returned status %d", resp.StatusCode)
+	}
+
+	var repos []GitHubRepo
+	if err := json.NewDecoder(resp.Body).Decode(&repos); err != nil {
+		return nil, fmt.Errorf("failed to decode repos response: %w", err)
+	}
+
+	if len(repos) == 0 {
+		return nil, nil
+	}
+
+	repo := repos[0]
+	return &LastPushResponse{
+		Repo:     repo.FullName,
+		Branch:   repo.DefaultBranch,
+		Message:  "Último push detectado",
+		SHA:      "",
+		Author:   s.login,
+		PushedAt: repo.PushedAt,
+	}, nil
 }
